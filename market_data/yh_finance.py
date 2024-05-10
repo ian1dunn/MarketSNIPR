@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 
-def get_historical_data(ticker: str, start_date: int):
+def get_historical_data(ticker: str, start_date: int, save_csv=False) -> pd.DataFrame:
     """
     A function to query daily historical stock price data from Yahoo Finance. Includes date, open, high, low, close,
     adjusted close, and volume. Returns a pandas dataframe with the values from the given date to present.
@@ -53,9 +53,10 @@ def get_historical_data(ticker: str, start_date: int):
         if cols and len(cols) == len(features):  # Avoid dividend rows
             data.append(_process_row([ele.text.strip() for ele in cols]))
 
-    # Create a DataFrame using the extracted data
-    # The first row will be used as the header
-    return pd.DataFrame(data, columns=features)
+    df = pd.DataFrame(data, columns=features)
+    if save_csv:
+        df.to_csv(f'yh_finance_data_{ticker}.csv', index=False)
+    return df
 
 
 def _process_row(columns):
@@ -86,5 +87,5 @@ def _date_to_unix(date_str):
 
 
 if __name__ == '__main__':
-    data = get_historical_data('SPY', _date_to_unix('Mar 11, 2024'))
+    data = get_historical_data('MSFT', _date_to_unix('Mar 11, 2024'), save_csv=True)
     print(data)
