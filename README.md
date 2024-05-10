@@ -1,2 +1,2 @@
-# StockSNIPR
-Stock Sentiment-Neural Integration for Predictive Returns
+# MarketSNIPR
+**Market** **S**entiment & **N**eural-Network **I**ntegration to **P**redict **R**eturns
