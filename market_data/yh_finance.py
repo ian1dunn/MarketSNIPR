@@ -7,6 +7,7 @@ A collection of web scraper utilities to obtain historical stock data from Yahoo
 
 Author: Ian Dunn
 """
+import os
 from datetime import datetime
 
 import requests
@@ -14,7 +15,7 @@ from bs4 import BeautifulSoup
 import pandas as pd
 
 
-def get_historical_data(ticker: str, start_date: int, save_csv=False) -> pd.DataFrame:
+def get_historical_data(ticker: str, start_date: datetime, save_csv=False) -> pd.DataFrame:
     """
     A function to query daily historical stock price data from Yahoo Finance. Includes date, open, high, low, close,
     adjusted close, and volume. Returns a pandas dataframe with the values from the given date to present.
@@ -22,9 +23,10 @@ def get_historical_data(ticker: str, start_date: int, save_csv=False) -> pd.Data
     Converts timestamps to Unix
 
     :param ticker: The ticker symbol to query
-    :param start_date: The start date of stock data in unix timestamp format
+    :param start_date: The start date of stock data with date strings replaced by datetime objects
     :return:
     """
+    start_date = int(start_date.timestamp())
     end_date = int(datetime.now().timestamp())
     features = ['date', 'open', 'high', 'low', 'close', 'adj_close', 'volume']
     url = (f'https://finance.yahoo.com/quote/{ticker}/history?period1={start_date}&period2={end_date}&interval=1d'
@@ -51,41 +53,32 @@ def get_historical_data(ticker: str, start_date: int, save_csv=False) -> pd.Data
         cols = row.find_all('td')
         # If there are columns, extract the text and append to the data list
         if cols and len(cols) == len(features):  # Avoid dividend rows
-            data.append(_process_row([ele.text.strip() for ele in cols]))
+            col_names = [ele.text.strip() for ele in cols]
+            col_names[0] = date_to_datetime(col_names[0])  # Convert date to datetime
+            col_names[6] = int(col_names[6].replace(',', ''))  # Convert volume to int
+            data.append(col_names)
 
     df = pd.DataFrame(data, columns=features)
+    df = df.iloc[::-1].reset_index(drop=True)  # Reverse final dataframe so dates are in chronological order
+
     if save_csv:
-        df.to_csv(f'yh_finance_data_{ticker}.csv', index=False)
+        os.makedirs('./csv', exist_ok=True)
+        df.to_csv(f'./csv/yh_finance_data_{ticker}.csv', index=False)
+
     return df
 
 
-def _process_row(columns):
-    """
-    Helper function to process the contents of a row of data given column values.
-
-    1. Convert date to Unix timestamp
-
-    :param columns: The values of the columns to process
-    :return: The processed column values in list format
-    """
-    columns[0] = _date_to_unix(columns[0])
-    return columns
-
-
-def _date_to_unix(date_str):
+def date_to_datetime(date_str: str) -> datetime:
     """
     Converts a date string in the format Mon dd, YYYY (ex. Mar 11, 2024) to Unix timestamp.
 
-    :param date_str: The date string to return
-    :return: The given date string in Unix timestamp format
+    :param date_str: The date string to convert to Unix timestamp
+    :return: The Unix timestamp of the given string
     """
-    date_obj = datetime.strptime(date_str, '%b %d, %Y')  # Convert date string to datetime object
-    # Subtract epoch (Jan 1, 1970) from date and get the total seconds
-    unix_time = int((date_obj - datetime(1970, 1, 1)).total_seconds())
-
-    return unix_time
+    return datetime.strptime(date_str, '%b %d, %Y')  # Convert date string to datetime object
+    # unix_time = int((date_obj - datetime(1970, 1, 1)).total_seconds())
 
 
 if __name__ == '__main__':
-    data = get_historical_data('MSFT', _date_to_unix('Mar 11, 2024'), save_csv=True)
+    data = get_historical_data('MSFT', datetime(2024, 3, 11), save_csv=True)
     print(data)
