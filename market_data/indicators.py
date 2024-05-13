@@ -1,29 +1,71 @@
 import pandas as pd
-import ta
+from ta.momentum import RSIIndicator, StochasticOscillator, ROCIndicator, WilliamsRIndicator
+from ta.trend import MACD, SMAIndicator, EMAIndicator
+from ta.volume import AccDistIndexIndicator, OnBalanceVolumeIndicator
 
 import config
 
 
 def add_technical_indicators(df: pd.DataFrame, window: int = config.LOOK_BACK_WINDOW) -> pd.DataFrame:
     """
-    Adds technical indicators to the DataFrame.
+    Adds ten most famous indicators used by technical traders to the DataFrame:
+    ADI, OBV, RSI, SR, ROC, WR, MACD, EMA, SMA, Disparity Index
 
     Parameters:
-    df (pd.DataFrame): DataFrame with columns ['open', 'high', 'low', 'close', 'volume'].
+    df (pd.DataFrame): DataFrame containing columns ['open', 'high', 'low', 'close', 'volume'].
     window (int): Look-back window period for indicators.
 
     Returns:
     pd.DataFrame: DataFrame with additional columns for each technical indicator.
     """
-    df['RSI'] = ta.momentum.rsi(df['close'], window=window, fillna=True)
-    df['SMA'] = df['close'].rolling(window=window).mean()
-    df['EMA'] = df['close'].ewm(span=window, adjust=False).mean()
-    df['Stochastic_%K'] = ta.momentum.stoch(df['high'], df['low'], df['close'], window=window)
-    df['MACD'] = ta.trend.macd(df['close'])
-    df['A/D'] = ta.volume.acc_dist_index(df['high'], df['low'], df['close'], df['volume'])
-    df['OBV'] = ta.volume.on_balance_volume(df['close'], df['volume'])
-    df['ROC'] = ta.momentum.roc(df['close'], window=window)
-    df['Williams_%R'] = ta.momentum.williams_r(df['high'], df['low'], df['close'], lbp=window)
-    df['Disparity_Index'] = (df['close'] / df['EMA']) * 100
+    indicators = _build_indicator_classes(df, window)
+
+    # Accumulation/Distribution Index (ADI)
+    df['adi'] = indicators['adi'].acc_dist_index()
+
+    # On-Balance Volume (OBV)
+    df['obv'] = indicators['obv'].on_balance_volume()
+
+    # Relative Strength Index (RSI)
+    df['rsi'] = indicators['rsi'].rsi()
+
+    # Stochastic Oscillator (SR)
+    df['sr'] = indicators['sr'].stoch()
+
+    # Rate of Change (ROC)
+    df['roc'] = indicators['roc'].roc()
+
+    # Williams %R (WR)
+    df['wr'] = indicators['wr'].williams_r()
+
+    # Moving Average Convergence Divergence (MACD)
+    df['macd'] = indicators['macd'].macd()
+
+    # Exponential Moving Average (EMA)
+    df['ema'] = indicators['ema'].ema_indicator()
+
+    # Simple Moving Average (SMA)
+    df['sma'] = indicators['sma'].sma_indicator()
+
+    df['disp_index'] = (df['close'] / df['ema']) * 100
 
     return df
+
+
+def _build_indicator_classes(df: pd.DataFrame, window: int) -> dict:
+    return {
+        'adi': AccDistIndexIndicator(high=df['high'], low=df['low'], close=df['close'], volume=df['volume'],
+                                     fillna=True),
+        'obv': OnBalanceVolumeIndicator(close=df['close'], volume=df['volume'], fillna=True),
+        'rsi': RSIIndicator(close=df['close'], window=window, fillna=True),
+
+        # TODO smooth window
+        'sr': StochasticOscillator(high=df['high'], low=df['low'], close=df['close'], window=window, fillna=True),
+        'roc': ROCIndicator(close=df['close'], window=window, fillna=True),
+        'wr': WilliamsRIndicator(high=df['high'], low=df['low'], close=df['close'], lbp=window, fillna=True),
+
+        # TODO different windows
+        'macd': MACD(close=df['close'], fillna=True),
+        'ema': EMAIndicator(close=df['close'], window=window, fillna=True),
+        'sma': SMAIndicator(close=df['close'], window=window, fillna=True)
+    }
