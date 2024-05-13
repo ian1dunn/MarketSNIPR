@@ -17,7 +17,7 @@ def preprocess(df: pd.DataFrame):
     df_indicators = add_technical_indicators(df)
 
     # Remove adj_close and volume
-    df.drop(columns=['adj_close', 'volume'])
+    df_indicators.drop(columns=['adj_close', 'volume'])
 
     return df_indicators
 
@@ -29,4 +29,4 @@ def _get_open_dates(start_date: datetime, end_date: datetime):
 
 if __name__ == "__main__":
     df = pd.read_csv("./csv/yh_finance_data_MSFT.csv", parse_dates=['date'])
-    print(preprocess(df))
+    print(preprocess(df).info())
