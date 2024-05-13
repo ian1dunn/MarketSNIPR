@@ -13,12 +13,10 @@ def preprocess(df: pd.DataFrame):
 
     # Ensure equal length of historical data points to avoid bias
 
-    # Compute statistics?
+    # TODO Compute statistics
     df = rsi(df)
 
     # Remove adj_close and volume
-
-    # if not extra_features:
 
     return df
 
@@ -26,6 +24,7 @@ def preprocess(df: pd.DataFrame):
 def _get_open_dates(start_date: datetime, end_date: datetime):
     xnys = xcals.get_calendar("XNYS")  # New York Stock Exchange
     return xnys.sessions_in_range(str(start_date), str(end_date))
+
 
 if __name__ == "__main__":
     df = pd.read_csv("./csv/yh_finance_data_MSFT.csv", parse_dates=['date'])
