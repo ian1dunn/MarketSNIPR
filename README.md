@@ -14,4 +14,6 @@
 
 ### SOFNN Research
 - [Leng, Prasad, McGinnity: An on-line algorithm for creating self-organizing fuzzy neural networks](https://sci-hub.ru/https://doi.org/10.1016/j.neunet.2004.07.009)
+  - A good Keras implementation of this paper: [andrewre23: sofenn (GitHub)](https://github.com/andrewre23/sofenn)
 - [Takagi & Sugeno: Fuzzy Identification of Systems and Its Applications to Modeling and Control](https://sci-hub.ru/10.1109/TSMC.1985.6313399)
+
