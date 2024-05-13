@@ -3,7 +3,7 @@ from datetime import datetime
 import exchange_calendars as xcals
 import pandas as pd
 
-from market_data.indicators import rsi
+from market_data.indicators import add_technical_indicators
 
 
 def preprocess(df: pd.DataFrame):
@@ -11,14 +11,15 @@ def preprocess(df: pd.DataFrame):
     open_dates = _get_open_dates(df.iloc[0].date, df.iloc[-1].date)
     df.drop(df[df.date != open_dates].index, inplace=True)
 
-    # Ensure equal length of historical data points to avoid bias
+    # TODO Ensure equal length of historical data points to avoid bias
 
-    # TODO Compute statistics
-    df = rsi(df)
+    # Compute technical indicators
+    df_indicators = add_technical_indicators(df)
 
     # Remove adj_close and volume
+    df.drop(columns=['adj_close', 'volume'])
 
-    return df
+    return df_indicators
 
 
 def _get_open_dates(start_date: datetime, end_date: datetime):
