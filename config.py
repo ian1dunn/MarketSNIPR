@@ -3,7 +3,7 @@ LOOK_BACK_WINDOW = 14  # 14 or 9, how many days to look back to determine past a
 #
 # Enviroment & Model Config
 #
-ENV = "HalfCheetah-v2"  # OpenAI gym environment name
+ENV = "envs/MarketEnv"  # OpenAI gym environment name
 SEED = 0  # Sets Gym, PyTorch and Numpy seeds
 START_TIMESTEPS = 25e3  # Time steps initial random policy is used
 EVAL_FREQ = 5e3  # How often (time steps) we evaluate

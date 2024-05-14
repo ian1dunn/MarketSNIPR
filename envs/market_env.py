@@ -16,17 +16,20 @@ class MarketEnv(gym.Env):
 
         # Observation space: [cash_balance, shares_owned, asset_info]
         num_assets = len(dataframes)
-        asset_info_length = 1 + len(dataframes[0].columns) - 1  # Closing price + technical indicators
+        asset_info_length = 11  # TODO Closing price + technical indicators
         low_obs = np.array([0] * (1 + num_assets + num_assets * asset_info_length), dtype=np.float32)
         high_obs = np.array([np.inf] * (1 + num_assets + num_assets * asset_info_length), dtype=np.float32)
         self.observation_space = spaces.Box(low=low_obs, high=high_obs, dtype=np.float32)
 
         # Action space: one integer per asset TODO bound it to avoid selling too many stocks or buying too many shares
-        self.action_space = spaces.Box(low=-np.inf, high=np.inf, shape=(num_assets,), dtype=np.int32)
+        self.action_space = spaces.Box(low=-5, high=5, shape=(num_assets,), dtype=np.int32)
 
         self.reset()
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        # We need the following line to seed self.np_random
+        super().reset(seed=seed)
+
         self.current_step = 0
         self.cash_balance = self.initial_balance
         self.shares_owned = np.zeros(len(self.dataframes))
@@ -36,8 +39,8 @@ class MarketEnv(gym.Env):
         asset_info = []
         for df in self.dataframes:
             row = df.iloc[self.current_step]
-            closing_price = row['Close']
-            indicators = row.drop('Close').values
+            closing_price = row['close']
+            indicators = row.drop('close').values
             asset_info.append(closing_price)
             asset_info.extend(indicators)
 
@@ -73,4 +76,6 @@ class MarketEnv(gym.Env):
         done = self.current_step >= len(self.dataframes[0]) - 1
         info = {}
 
-        return self._get_observation(), reward, done, info
+        obs = self._get_observation()
+        print(f'Observation at step {self.current_step - 1}: {obs}')
+        return obs, reward, done, info
