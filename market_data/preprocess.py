@@ -1,3 +1,5 @@
+import os
+import time
 from datetime import datetime
 
 import exchange_calendars as xcals
@@ -6,7 +8,7 @@ import pandas as pd
 from market_data.indicators import add_technical_indicators
 
 
-def preprocess(df: pd.DataFrame):
+def preprocess(df: pd.DataFrame, save_csv=True):
     # Remove timestamps that do not correspond with open market days
     # Note: not necessary when using yahoo finance, but would be useful for removing weekend/holiday sentiment analysis
     open_dates = _get_open_dates(df.iloc[0].date, df.iloc[-1].date)
@@ -29,8 +31,13 @@ def preprocess(df: pd.DataFrame):
     listed stocks are only a few months. This time-dimension alignment of stocks’ historical data will prevent the 
     biased action of the agent toward the stock with more data."
     """
+    df_indicators.drop(columns=['date'], inplace=True)
 
     # TODO regularize all columns except date by normalizing the observation space using Batch Normalization
+
+    if save_csv:
+        os.makedirs('./preprocessed', exist_ok=True)
+        df_indicators.to_csv(f'./preprocessed/{time.strftime("%Y_%m_%d_%H_%M_%S")}.csv', index=False)
 
     return df_indicators
 
