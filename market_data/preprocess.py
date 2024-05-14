@@ -22,6 +22,7 @@ def preprocess(df: pd.DataFrame):
     df_indicators.drop(columns=['open', 'low', 'high', 'volume'], inplace=True)
 
     # TODO normalize data points so all stocks have equal length
+    #  or, entirely remove dates and say stocks must have >X year previous history to be included in the portfolio?
     """
     "Further dataset processing is required to ensure that all financial assets (stocks) considered in the portfolio 
     have an equal length of historical data points. Some stocks have been recorded for decades, while other newly 

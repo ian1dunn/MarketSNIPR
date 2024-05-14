@@ -1,11 +1,10 @@
 import numpy as np
 import torch
-import gym
-import argparse
+import gymnasium as gym
 import os
 
 import config
-from model import TD3, utils
+from model import td3, utils
 
 
 # Runs policy for X episodes and returns average reward
@@ -59,7 +58,7 @@ if __name__ == "__main__":
               "noise_clip": config.NOISE_CLIP * max_action, "policy_freq": config.POLICY_FREQ}
 
     # Target policy smoothing is scaled wrt the action scale
-    policy = TD3.TD3(**kwargs)
+    policy = td3.TD3(**kwargs)
 
     if config.LOAD_MODEL != "":
         policy_file = file_name if config.LOAD_MODEL == "default" else config.LOAD_MODEL
