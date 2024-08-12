@@ -1,81 +1,73 @@
 import gymnasium as gym
 import numpy as np
-import pandas as pd
 from gymnasium import spaces
+
+from trading.controller import Controller
 
 
 class MarketEnv(gym.Env):
-    def __init__(self, dataframes: list[pd.DataFrame], initial_balance=10000):
+    def __init__(self, controller: Controller):
         super(MarketEnv, self).__init__()
 
-        self.dataframes = dataframes
-        self.initial_balance = initial_balance
-        self.current_step = 0
-        self.cash_balance = initial_balance
-        self.shares_owned = np.zeros(len(dataframes))
+        self.controller = controller
+        self.initial_balance = self.controller.get_buying_power()
+        self.cash_balance = self.initial_balance
+        self._previous_portfolio_value = self.controller.get_portfolio_value()
 
         # Observation space: [cash_balance, shares_owned, asset_info]
-        num_assets = len(dataframes)
+        self.num_assets = len(self.controller.get_open_positions())
+        self.shares_owned = np.zeros(self.num_assets)
         asset_info_length = 11  # TODO Closing price + technical indicators
-        low_obs = np.array([0] * (1 + num_assets + num_assets * asset_info_length), dtype=np.float32)
-        high_obs = np.array([np.inf] * (1 + num_assets + num_assets * asset_info_length), dtype=np.float32)
+        low_obs = np.array([0] * (1 + self.num_assets + self.num_assets * asset_info_length), dtype=np.float32)
+        high_obs = np.array([np.inf] * (1 + self.num_assets + self.num_assets * asset_info_length), dtype=np.float32)
         self.observation_space = spaces.Box(low=low_obs, high=high_obs, dtype=np.float32)
 
         # Action space: one integer per asset TODO bound it to avoid selling too many stocks or buying too many shares
-        self.action_space = spaces.Box(low=-5, high=5, shape=(num_assets,), dtype=np.int32)
+        self.action_space = spaces.Box(low=-5, high=5, shape=(self.num_assets,), dtype=np.int32)
 
         self.reset()
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
-
-        self.current_step = 0
+        self.controller.reset()
         self.cash_balance = self.initial_balance
-        self.shares_owned = np.zeros(len(self.dataframes))
+        self.shares_owned = np.zeros(self.num_assets)
         return self._get_observation()
 
     def _get_observation(self):
         asset_info = []
-        for df in self.dataframes:
-            row = df.iloc[self.current_step]
-            closing_price = row['close']
-            indicators = row.drop('close').values
+        for pos in self.controller.get_open_positions():
+            closing_price, indicators = self.controller.get_position_data(pos)
             asset_info.append(closing_price)
             asset_info.extend(indicators)
 
         observation = [self.cash_balance] + list(self.shares_owned) + asset_info
         return np.array(observation, dtype=np.float32)
 
-    def _get_portfolio_value(self):
-        asset_values = [df.iloc[self.current_step]['Close'] * self.shares_owned[i] for i, df in
-                        enumerate(self.dataframes)]
-        return self.cash_balance + sum(asset_values)
-
-    def step(self, action):
+    def step(self, action):  # Occurs at end of each day
         # Perform the trades
         for i, act in enumerate(action):
+            closing_price = self.controller.get_position_data(self.controller.positions[i])[0]
+            # TODO modify this behavior to limit purchasing
             if act > 0:  # Buy shares
-                num_shares_to_buy = act
-                cost = num_shares_to_buy * self.dataframes[i].iloc[self.current_step]['Close']
+                cost = act * closing_price
                 if self.cash_balance >= cost:
                     self.cash_balance -= cost
-                    self.shares_owned[i] += num_shares_to_buy
+                    self.shares_owned[i] += act
             elif act < 0:  # Sell shares
-                num_shares_to_sell = -act
-                if self.shares_owned[i] >= num_shares_to_sell:
-                    self.cash_balance += num_shares_to_sell * self.dataframes[i].iloc[self.current_step]['Close']
-                    self.shares_owned[i] -= num_shares_to_sell
+                if self.shares_owned[i] >= act:
+                    self.cash_balance += act * closing_price
+                    self.shares_owned[i] -= act
 
         # Calculate reward
-        portfolio_value = self._get_portfolio_value()
+        portfolio_value = self.controller.get_portfolio_value()
         reward = portfolio_value - self._previous_portfolio_value
         self._previous_portfolio_value = portfolio_value
 
-        self.current_step += 1
-        done = self.current_step >= len(self.dataframes[0]) - 1
+        done = self.controller.is_done()
         info = {}
 
         obs = self._get_observation()
-        print(f'Observation at step {self.current_step - 1}: {obs}')
+        print(f'Observation at step {self.controller.step - 1}: {obs}')
         return obs, reward, done, info
